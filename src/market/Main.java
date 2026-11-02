@@ -4,15 +4,14 @@ import java.util.NoSuchElementException;
 import java.util.Scanner;
 
 public class Main {
+    private static final Scanner scanner = new Scanner(System.in);
     private static Market market;
-    private static InputReader input;
     private static Cashier cashier;
 
     public static void main(String[] args) {
         market = new Market();
         market.loadSampleData();
-        input = new InputReader(new Scanner(System.in));
-        cashier = new Cashier(market, input);
+        cashier = new Cashier(market);
 
         System.out.println("=================================================");
         System.out.println("   SISTEMA DE ESTOQUE, COMPRAS E CAIXA");
@@ -26,10 +25,39 @@ public class Main {
         System.out.println("Sistema finalizado.");
     }
 
+    static String readLine(String prompt) {
+        System.out.print(prompt);
+        return scanner.nextLine().trim();
+    }
+
+    static int readInt(String prompt) {
+        while (true) {
+            try {
+                return Integer.parseInt(readLine(prompt));
+            } catch (NumberFormatException exception) {
+                System.out.println("Entrada inválida: digite um número inteiro.");
+            }
+        }
+    }
+
+    static double readDouble(String prompt) {
+        while (true) {
+            try {
+                return Double.parseDouble(readLine(prompt).replace(',', '.'));
+            } catch (NumberFormatException exception) {
+                System.out.println("Valor inválido: use o formato 12,50.");
+            }
+        }
+    }
+
+    static boolean readYes(String prompt) {
+        return readLine(prompt + " (s/n): ").equalsIgnoreCase("s");
+    }
+
     private static void runMenu() {
         while (true) {
             printMenu();
-            int option = input.readInt("Opção: ", 0, 10);
+            int option = readInt("Opção: ");
             if (option == 0) {
                 return;
             }
@@ -50,7 +78,7 @@ public class Main {
             } catch (IllegalArgumentException | IllegalStateException exception) {
                 System.out.println("Erro: " + exception.getMessage());
             }
-            input.readLine("\nPressione ENTER para continuar...");
+            readLine("\nPressione ENTER para continuar...");
         }
     }
 
@@ -75,38 +103,32 @@ public class Main {
             System.out.println("Catálogo cheio. Não é possível cadastrar mais produtos.");
             return;
         }
-        int code = input.readInt("Código (1 a 99999): ", 1, 99999);
+        int code = readInt("Código: ");
         if (market.catalog().findByCode(code) != null) {
             System.out.println("Já existe um produto com esse código.");
             return;
         }
-        String name = input.readText("Nome: ", 30);
-        int price = input.readMoneyInCents("Preço: R$ ", 1, 10000000);
-        int quantity = input.readInt("Quantidade inicial (0 a " + Market.MAX_STOCK_PER_PRODUCT + "): ",
-                0, Market.MAX_STOCK_PER_PRODUCT);
+        String name = readLine("Nome: ");
+        double price = readDouble("Preço: R$ ");
+        int quantity = readInt("Quantidade inicial: ");
         System.out.println("Departamentos existentes:");
         market.categories().printDepartmentNames();
-        String department = input.readText("Departamento: ", 20);
-        String category = input.readText("Categoria: ", 20);
-        Product product = new Product(code, name, price, quantity, department, category);
-        market.registerProduct(product);
+        String department = readLine("Departamento: ");
+        String category = readLine("Categoria: ");
+        Product product = new Product(code, name, price, quantity, category);
+        market.registerProduct(product, department);
         System.out.println("Produto cadastrado: " + product);
     }
 
     private static void restock() {
-        int code = input.readInt("Código do produto: ", 1, 99999);
+        int code = readInt("Código do produto: ");
         Product product = market.stock().findByCode(code);
         if (product == null) {
             System.out.println("Produto não encontrado.");
             return;
         }
         System.out.println(product);
-        int limit = Market.MAX_STOCK_PER_PRODUCT - product.getQuantity();
-        if (limit <= 0) {
-            System.out.println("Estoque já está no limite máximo.");
-            return;
-        }
-        int amount = input.readInt("Quantidade a adicionar (1 a " + limit + "): ", 1, limit);
+        int amount = readInt("Quantidade a adicionar: ");
         market.restock(code, amount);
         System.out.println("Estoque atualizado: " + product);
     }
@@ -120,20 +142,20 @@ public class Main {
     private static void showCategories() {
         System.out.println("1. Ver árvore completa");
         System.out.println("2. Ver um departamento");
-        int option = input.readInt("Opção: ", 1, 2);
+        int option = readInt("Opção: ");
         if (option == 1) {
             market.categories().print();
             return;
         }
         market.categories().printDepartmentNames();
-        String department = input.readText("Departamento: ", 20);
+        String department = readLine("Departamento: ");
         if (!market.categories().printDepartment(department)) {
             System.out.println("Departamento não encontrado.");
         }
     }
 
     private static void addCustomer() {
-        String name = input.readText("Nome do cliente: ", 30);
+        String name = readLine("Nome do cliente: ");
         Customer customer = market.queue().enqueue(name);
         System.out.printf("%s entrou na fila. Posição: %d%n", customer, market.queue().size());
     }
@@ -149,10 +171,10 @@ public class Main {
     private static void showBoughtTogether() {
         System.out.println("Matriz de adjacência (quantas vezes cada par foi comprado junto):");
         market.boughtTogether().printMatrix();
-        if (!input.readYesNo("\nVer recomendações para um produto?")) {
+        if (!readYes("\nVer recomendações para um produto?")) {
             return;
         }
-        int code = input.readInt("Código do produto: ", 1, 99999);
+        int code = readInt("Código do produto: ");
         Product product = market.catalog().findByCode(code);
         if (product == null) {
             System.out.println("Produto não encontrado.");

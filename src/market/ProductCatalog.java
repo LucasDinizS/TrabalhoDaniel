@@ -2,13 +2,13 @@ package market;
 
 public class ProductCatalog {
     private final int[] codes;
-    private final int[] prices;
+    private final double[] prices;
     private final Product[] products;
     private int size;
 
     public ProductCatalog(int capacity) {
         codes = new int[capacity];
-        prices = new int[capacity];
+        prices = new double[capacity];
         products = new Product[capacity];
         size = 0;
     }
@@ -37,7 +37,7 @@ public class ProductCatalog {
             position--;
         }
         codes[position] = product.getCode();
-        prices[position] = product.getPriceInCents();
+        prices[position] = product.getPrice();
         products[position] = product;
         size++;
         return true;
@@ -65,7 +65,7 @@ public class ProductCatalog {
         return index >= 0 ? products[index] : null;
     }
 
-    public int priceOf(int code) {
+    public double priceOf(int code) {
         int index = indexOf(code);
         return index >= 0 ? prices[index] : -1;
     }
@@ -77,7 +77,7 @@ public class ProductCatalog {
         }
         System.out.println("Posição | Código | Preço");
         for (int i = 0; i < size; i++) {
-            System.out.printf("%7d | %6d | %s%n", i, codes[i], Money.format(prices[i]));
+            System.out.printf("%7d | %6d | R$ %.2f%n", i, codes[i], prices[i]);
         }
         System.out.printf("Ocupação do array: %d/%d%n", size, codes.length);
     }

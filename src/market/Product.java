@@ -3,17 +3,15 @@ package market;
 public class Product {
     private final int code;
     private final String name;
-    private final int priceInCents;
-    private final String department;
+    private final double price;
     private final String category;
     private int quantity;
 
-    public Product(int code, String name, int priceInCents, int quantity, String department, String category) {
+    public Product(int code, String name, double price, int quantity, String category) {
         this.code = code;
         this.name = name;
-        this.priceInCents = priceInCents;
+        this.price = price;
         this.quantity = quantity;
-        this.department = department;
         this.category = category;
     }
 
@@ -25,16 +23,12 @@ public class Product {
         return name;
     }
 
-    public int getPriceInCents() {
-        return priceInCents;
+    public double getPrice() {
+        return price;
     }
 
     public int getQuantity() {
         return quantity;
-    }
-
-    public String getDepartment() {
-        return department;
     }
 
     public String getCategory() {
@@ -55,6 +49,6 @@ public class Product {
 
     @Override
     public String toString() {
-        return String.format("[%d] %-22s %10s  estoque: %d", code, name, Money.format(priceInCents), quantity);
+        return String.format("[%d] %-22s R$ %6.2f  estoque: %d", code, name, price, quantity);
     }
 }

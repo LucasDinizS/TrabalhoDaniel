@@ -23,8 +23,8 @@ public class CategoryTree {
         root = new TreeNode(rootName, null);
     }
 
-    public void insert(Product product) {
-        TreeNode department = findOrCreateChild(root, product.getDepartment());
+    public void insert(String departmentName, Product product) {
+        TreeNode department = findOrCreateChild(root, departmentName);
         TreeNode category = findOrCreateChild(department, product.getCategory());
         addChildSorted(category, new TreeNode(product.getName(), product));
     }

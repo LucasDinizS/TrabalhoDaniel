@@ -1,14 +1,10 @@
 package market;
 
 public class Cashier {
-    private static final long MAX_PAYMENT_IN_CENTS = 999999999L;
-
     private final Market market;
-    private final InputReader input;
 
-    public Cashier(Market market, InputReader input) {
+    public Cashier(Market market) {
         this.market = market;
-        this.input = input;
     }
 
     public void attendCustomers() {
@@ -27,15 +23,15 @@ public class Cashier {
                 return;
             }
             System.out.println("Próximo da fila: " + next);
-            keepAttending = input.readYesNo("Chamar o próximo cliente?");
+            keepAttending = Main.readYes("Chamar o próximo cliente?");
         }
     }
 
     private void attend(Customer customer) {
         Cart cart = market.newCart();
         while (true) {
-            System.out.println("\n--- Caixa | " + customer + " | Itens: " + cart.distinctItems()
-                    + " | Total: " + Money.format(cart.totalInCents()) + " ---");
+            System.out.printf("%n--- Caixa | %s | Itens: %d | Total: R$ %.2f ---%n",
+                    customer, cart.distinctItems(), cart.total());
             System.out.println("1. Adicionar produto");
             System.out.println("2. Remover produto");
             System.out.println("3. Desfazer última operação");
@@ -43,12 +39,12 @@ public class Cashier {
             System.out.println("5. Sugestões de produtos comprados juntos");
             System.out.println("6. Finalizar compra");
             System.out.println("0. Cancelar atendimento");
-            int option = input.readInt("Opção: ", 0, 6);
+            int option = Main.readInt("Opção: ");
             try {
                 switch (option) {
                     case 1 -> addToCart(cart);
                     case 2 -> removeFromCart(cart);
-                    case 3 -> undo(cart);
+                    case 3 -> cart.undo();
                     case 4 -> cart.print();
                     case 5 -> printSuggestions(cart);
                     case 6 -> {
@@ -57,7 +53,7 @@ public class Cashier {
                         }
                     }
                     case 0 -> {
-                        if (input.readYesNo("Cancelar a compra de " + customer.name() + "?")) {
+                        if (Main.readYes("Cancelar a compra de " + customer.getName() + "?")) {
                             System.out.println("Atendimento cancelado. O estoque não foi alterado.");
                             return;
                         }
@@ -71,7 +67,7 @@ public class Cashier {
     }
 
     private void addToCart(Cart cart) {
-        int code = input.readInt("Código do produto: ", 1, 99999);
+        int code = Main.readInt("Código do produto: ");
         Product product = market.catalog().findByCode(code);
         if (product == null) {
             System.out.println("Produto não encontrado.");
@@ -82,7 +78,7 @@ public class Cashier {
             System.out.println("Sem estoque disponível para " + product.getName() + ".");
             return;
         }
-        int quantity = input.readInt("Quantidade (máx. " + available + "): ", 1, available);
+        int quantity = Main.readInt("Quantidade (disponível: " + available + "): ");
         cart.add(code, quantity);
         System.out.printf("Adicionado: %d x %s%n", quantity, product.getName());
         int[] suggestion = market.boughtTogether().recommendationsFor(code, 1);
@@ -98,22 +94,15 @@ public class Cashier {
             return;
         }
         cart.print();
-        int code = input.readInt("Código do produto a remover: ", 1, 99999);
+        int code = Main.readInt("Código do produto a remover: ");
         int inCart = cart.quantityOf(code);
         if (inCart == 0) {
             System.out.println("Esse produto não está no carrinho.");
             return;
         }
-        int quantity = input.readInt("Quantidade a remover (máx. " + inCart + "): ", 1, inCart);
+        int quantity = Main.readInt("Quantidade a remover (no carrinho: " + inCart + "): ");
         cart.remove(code, quantity);
         System.out.println("Removido do carrinho.");
-    }
-
-    private void undo(Cart cart) {
-        CartOperation undone = cart.undo();
-        String productName = market.catalog().findByCode(undone.code()).getName();
-        String action = undone.type() == CartOperation.Type.ADD ? "adição" : "remoção";
-        System.out.printf("Desfeita a %s de %d x %s.%n", action, undone.quantity(), productName);
     }
 
     private void printSuggestions(Cart cart) {
@@ -146,13 +135,10 @@ public class Cashier {
             return false;
         }
         cart.print();
-        long total = cart.totalInCents();
-        if (total > MAX_PAYMENT_IN_CENTS) {
-            System.out.println("Total acima do limite aceito pelo caixa (" + Money.format(MAX_PAYMENT_IN_CENTS) + ").");
-            return false;
-        }
-        int paid = input.readMoneyInCents("Valor recebido em dinheiro: R$ ", total, MAX_PAYMENT_IN_CENTS);
-        printReceipt(customer, market.completeSale(cart, paid));
+        double total = cart.total();
+        double paid = Main.readDouble("Valor recebido em dinheiro: R$ ");
+        int relations = market.completeSale(cart, paid);
+        printReceipt(customer, total, paid, relations);
         return true;
     }
 
@@ -172,14 +158,14 @@ public class Cashier {
             simulateAdd(cart, 301, 3);
             simulateAdd(cart, 401, 2);
             System.out.println("\nCliente desistiu do último item. Desfazendo (pilha)...");
-            undo(cart);
+            cart.undo();
             System.out.println();
             cart.print();
-            long total = cart.totalInCents();
-            int paid = (int) (((total / 5000) + 1) * 5000);
-            System.out.println("\nCliente paga com " + Money.format(paid));
-            SaleResult result = market.completeSale(cart, paid);
-            printReceipt(customer, result);
+            double total = cart.total();
+            double paid = ((int) (total / 50) + 1) * 50;
+            System.out.printf("%nCliente paga com R$ %.2f%n", paid);
+            int relations = market.completeSale(cart, paid);
+            printReceipt(customer, total, paid, relations);
         } catch (IllegalArgumentException | IllegalStateException exception) {
             System.out.println("Simulação interrompida: " + exception.getMessage());
             return;
@@ -197,28 +183,13 @@ public class Cashier {
         System.out.printf("+ %d x %s%n", quantity, market.catalog().findByCode(code).getName());
     }
 
-    private void printReceipt(Customer customer, SaleResult result) {
+    private void printReceipt(Customer customer, double total, double paid, int relations) {
         System.out.println("\n========== CUPOM ==========");
         System.out.println("Cliente: " + customer);
-        System.out.println("Total:   " + Money.format(result.totalInCents()));
-        System.out.println("Pago:    " + Money.format(result.paidInCents()));
-        System.out.println("Troco:   " + Money.format(result.changeInCents()));
-        printChange(result.changeInCents());
-        System.out.println("Relações registradas no grafo: " + result.newRelations());
+        System.out.printf("Total:   R$ %.2f%n", total);
+        System.out.printf("Pago:    R$ %.2f%n", paid);
+        System.out.printf("Troco:   R$ %.2f%n", paid - total);
+        System.out.println("Relações registradas no grafo: " + relations);
         System.out.println("===========================");
-    }
-
-    private void printChange(int change) {
-        if (change == 0) {
-            System.out.println("  Sem troco.");
-            return;
-        }
-        int[] counts = Money.breakIntoDenominations(change);
-        for (int i = 0; i < counts.length; i++) {
-            if (counts[i] > 0) {
-                String kind = Money.isBill(i) ? "nota" : "moeda";
-                System.out.printf("  %d x %s de %s%n", counts[i], kind, Money.format(Money.denominationAt(i)));
-            }
-        }
     }
 }

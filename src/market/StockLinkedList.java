@@ -59,11 +59,11 @@ public class StockLinkedList {
         return total;
     }
 
-    public long totalValueInCents() {
-        long total = 0;
+    public double totalValue() {
+        double total = 0;
         Node current = head;
         while (current != null) {
-            total += (long) current.product.getQuantity() * current.product.getPriceInCents();
+            total += current.product.getQuantity() * current.product.getPrice();
             current = current.next;
         }
         return total;
@@ -96,7 +96,7 @@ public class StockLinkedList {
             current = current.next;
             position++;
         }
-        System.out.printf("Produtos: %d | Unidades: %d | Valor total: %s%n",
-                size, totalUnits(), Money.format(totalValueInCents()));
+        System.out.printf("Produtos: %d | Unidades: %d | Valor total: R$ %.2f%n",
+                size, totalUnits(), totalValue());
     }
 }

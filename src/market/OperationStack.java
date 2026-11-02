@@ -2,47 +2,48 @@ package market;
 
 public class OperationStack {
     private static class Node {
-        private final CartOperation operation;
+        private final boolean addition;
+        private final int code;
+        private final int quantity;
         private final Node below;
 
-        private Node(CartOperation operation, Node below) {
-            this.operation = operation;
+        private Node(boolean addition, int code, int quantity, Node below) {
+            this.addition = addition;
+            this.code = code;
+            this.quantity = quantity;
             this.below = below;
         }
     }
 
     private Node top;
-    private int size;
 
-    public void push(CartOperation operation) {
-        top = new Node(operation, top);
-        size++;
+    public void push(boolean addition, int code, int quantity) {
+        top = new Node(addition, code, quantity, top);
     }
 
-    public CartOperation pop() {
-        if (isEmpty()) {
-            return null;
+    public void pop() {
+        if (top != null) {
+            top = top.below;
         }
-        CartOperation operation = top.operation;
-        top = top.below;
-        size--;
-        return operation;
     }
 
-    public CartOperation peek() {
-        return isEmpty() ? null : top.operation;
+    public boolean topIsAddition() {
+        return top.addition;
+    }
+
+    public int topCode() {
+        return top.code;
+    }
+
+    public int topQuantity() {
+        return top.quantity;
     }
 
     public boolean isEmpty() {
         return top == null;
     }
 
-    public int size() {
-        return size;
-    }
-
     public void clear() {
         top = null;
-        size = 0;
     }
 }

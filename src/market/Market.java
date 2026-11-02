@@ -3,7 +3,6 @@ package market;
 public class Market {
     public static final int CATALOG_CAPACITY = 50;
     public static final int CART_CAPACITY = 20;
-    public static final int MAX_STOCK_PER_PRODUCT = 100000;
 
     private final ProductCatalog catalog = new ProductCatalog(CATALOG_CAPACITY);
     private final StockLinkedList stock = new StockLinkedList();
@@ -35,7 +34,7 @@ public class Market {
         return new Cart(catalog, CART_CAPACITY);
     }
 
-    public void registerProduct(Product product) {
+    public void registerProduct(Product product, String department) {
         if (catalog.isFull()) {
             throw new IllegalStateException("Catálogo cheio: limite de " + catalog.capacity() + " produtos.");
         }
@@ -44,7 +43,7 @@ public class Market {
         }
         catalog.add(product);
         stock.append(product);
-        categories.insert(product);
+        categories.insert(department, product);
         boughtTogether.addVertex(product.getCode());
     }
 
@@ -56,19 +55,16 @@ public class Market {
         if (amount <= 0) {
             throw new IllegalArgumentException("A quantidade de reposição deve ser maior que zero.");
         }
-        if ((long) product.getQuantity() + amount > MAX_STOCK_PER_PRODUCT) {
-            throw new IllegalArgumentException("A reposição ultrapassa o limite de " + MAX_STOCK_PER_PRODUCT + " unidades.");
-        }
         stock.restock(code, amount);
     }
 
-    public SaleResult completeSale(Cart cart, int paidInCents) {
+    public int completeSale(Cart cart, double paid) {
         if (cart.isEmpty()) {
             throw new IllegalStateException("Não é possível finalizar uma compra com o carrinho vazio.");
         }
-        long total = cart.totalInCents();
-        if (paidInCents < total) {
-            throw new IllegalArgumentException("Valor pago insuficiente. Faltam " + Money.format(total - paidInCents) + ".");
+        double total = cart.total();
+        if (paid < total) {
+            throw new IllegalArgumentException(String.format("Valor pago insuficiente. Faltam R$ %.2f.", total - paid));
         }
         for (int i = 0; i < cart.distinctItems(); i++) {
             Product product = catalog.findByCode(cart.codeAt(i));
@@ -80,24 +76,23 @@ public class Market {
             catalog.findByCode(cart.codeAt(i)).decreaseQuantity(cart.quantityAt(i));
         }
         int relations = boughtTogether.registerPurchase(cart.codes());
-        int change = (int) (paidInCents - total);
         cart.clear();
-        return new SaleResult(total, paidInCents, change, relations);
+        return relations;
     }
 
     public void loadSampleData() {
-        registerProduct(new Product(101, "Arroz 5kg", 2899, 40, "Alimentos", "Grãos"));
-        registerProduct(new Product(102, "Feijão 1kg", 849, 50, "Alimentos", "Grãos"));
-        registerProduct(new Product(103, "Macarrão 500g", 499, 60, "Alimentos", "Massas"));
-        registerProduct(new Product(104, "Molho de Tomate", 349, 45, "Alimentos", "Massas"));
-        registerProduct(new Product(201, "Refrigerante 2L", 999, 30, "Bebidas", "Refrigerantes"));
-        registerProduct(new Product(202, "Suco de Laranja 1L", 799, 25, "Bebidas", "Sucos"));
-        registerProduct(new Product(203, "Café 500g", 1899, 22, "Bebidas", "Café"));
-        registerProduct(new Product(301, "Leite Integral 1L", 549, 80, "Laticínios", "Leites"));
-        registerProduct(new Product(302, "Queijo Mussarela", 1290, 20, "Laticínios", "Queijos"));
-        registerProduct(new Product(401, "Detergente 500ml", 279, 35, "Limpeza", "Cozinha"));
-        registerProduct(new Product(402, "Sabão em Pó 1kg", 1599, 4, "Limpeza", "Lavanderia"));
-        registerProduct(new Product(501, "Pão de Forma", 899, 18, "Padaria", "Pães"));
+        registerProduct(new Product(101, "Arroz 5kg", 28.99, 40, "Grãos"), "Alimentos");
+        registerProduct(new Product(102, "Feijão 1kg", 8.49, 50, "Grãos"), "Alimentos");
+        registerProduct(new Product(103, "Macarrão 500g", 4.99, 60, "Massas"), "Alimentos");
+        registerProduct(new Product(104, "Molho de Tomate", 3.49, 45, "Massas"), "Alimentos");
+        registerProduct(new Product(201, "Refrigerante 2L", 9.99, 30, "Refrigerantes"), "Bebidas");
+        registerProduct(new Product(202, "Suco de Laranja 1L", 7.99, 25, "Sucos"), "Bebidas");
+        registerProduct(new Product(203, "Café 500g", 18.99, 22, "Café"), "Bebidas");
+        registerProduct(new Product(301, "Leite Integral 1L", 5.49, 80, "Leites"), "Laticínios");
+        registerProduct(new Product(302, "Queijo Mussarela", 12.90, 20, "Queijos"), "Laticínios");
+        registerProduct(new Product(401, "Detergente 500ml", 2.79, 35, "Cozinha"), "Limpeza");
+        registerProduct(new Product(402, "Sabão em Pó 1kg", 15.99, 4, "Lavanderia"), "Limpeza");
+        registerProduct(new Product(501, "Pão de Forma", 8.99, 18, "Pães"), "Padaria");
 
         boughtTogether.addRelation(101, 102, 10);
         boughtTogether.addRelation(103, 104, 8);

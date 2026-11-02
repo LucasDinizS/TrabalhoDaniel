@@ -47,17 +47,14 @@ A opção **10 (Simulação automática)** executa o exemplo prático completo d
 |---|---|
 | `ProductCatalog.java` | **Array** ordenado com códigos e preços + busca binária |
 | `StockLinkedList.java` | **Lista encadeada** simples com os produtos do estoque |
-| `OperationStack.java` | **Pilha** (encadeada) das operações do carrinho |
-| `CartOperation.java` | Registro de uma operação (adição/remoção) empilhada |
+| `OperationStack.java` | **Pilha** (encadeada) das operações do carrinho (tipo, código e quantidade em cada nó) |
 | `Cart.java` | Carrinho de compras: itens em array + pilha para desfazer |
 | `CustomerQueue.java` | **Fila** (encadeada) de clientes aguardando o caixa |
 | `ProductGraph.java` | **Grafo** ponderado com matriz de adjacência |
 | `CategoryTree.java` | **Árvore** genérica: Mercado → Departamento → Categoria → Produto |
-| `Money.java` | Formatação monetária e decomposição do troco |
 | `Market.java` | Reúne todas as estruturas e mantém a consistência entre elas |
 | `Cashier.java` | Fluxo do caixa: atendimento, carrinho, pagamento, simulação |
-| `InputReader.java` | Leitura e validação de todas as entradas do usuário |
-| `Main.java` | Menu principal |
+| `Main.java` | Menu principal e leitura das entradas do usuário |
 
 ## Modelagem matemática e lógica
 
@@ -152,31 +149,24 @@ As operações são **recursivas**:
 - **Contagem de produtos:** produtos(nó) = (1 se o nó é folha-produto, senão 0) + Σ produtos(filhoᵢ).
 - **Altura:** altura(nó) = 0 se não tem filhos; senão 1 + máx(altura(filhoᵢ)).
 
-### 7. Cálculo do troco (`Money`)
+### 7. Total e troco (`Cart` e `Cashier`)
 
-Os valores são guardados em **centavos inteiros** (R$ 28,99 → 2899). Assim evitamos o erro de
-arredondamento do ponto flutuante (em `double`, 0,1 + 0,2 ≠ 0,3).
+Os preços são números decimais (`double`). O total do carrinho é Σ (preçoᵢ × quantidadeᵢ) e
+o troco é troco = valor pago − total.
 
-Troco = valor pago − total. A decomposição em cédulas e moedas usa o **algoritmo guloso**: para cada
-valor, do maior ao menor (R$ 200, 100, 50, 20, 10, 5, 2, 1, 0,50, 0,25, 0,10, 0,05, 0,01):
+Como o `double` tem pequenos erros de arredondamento (0,1 + 0,2 resulta em 0,30000000000000004), o total
+é arredondado para 2 casas decimais: `Math.round(total * 100) / 100.0`. Sem isso, pagar o valor exato
+poderia ser recusado por uma diferença invisível.
 
-  quantidade = troco ÷ valor (divisão inteira)
-  troco = troco mod valor (resto)
-
-Para o sistema monetário brasileiro (um sistema *canônico*), a estratégia gulosa sempre fornece o menor
-número possível de cédulas e moedas. Como existe a moeda de R$ 0,01, o resto final é sempre zero.
-
-Exemplo da simulação: total R$ 62,44, pago R$ 100,00 → troco R$ 37,56 =
-20 + 10 + 5 + 2 + 0,50 + 0,05 + 0,01.
+Exemplo da simulação: total R$ 62,44, pago R$ 100,00 → troco R$ 37,56.
 
 ## Tratamento de erros e consistência dos dados
 
 | Situação | Tratamento |
 |---|---|
 | Texto onde se espera número | Mensagem de erro e nova leitura (`NumberFormatException`) |
-| Número fora do intervalo (opção de menu, código, quantidade) | Intervalo mínimo/máximo validado |
-| Valor monetário mal formatado ou com mais de 2 casas | Validado por expressão regular; aceita `12,50` ou `12.50` |
-| Campo de texto vazio ou muito longo | Rejeitado |
+| Opção de menu inexistente | Mensagem "Opção inválida" |
+| Valor monetário mal formatado | Mensagem de erro e nova leitura; aceita `12,50` ou `12.50` |
 | Código de produto duplicado | Cadastro recusado |
 | Catálogo cheio (limite do array) | Cadastro bloqueado |
 | Carrinho cheio (limite do array) | Adição recusada |
@@ -185,7 +175,7 @@ Exemplo da simulação: total R$ 62,44, pago R$ 100,00 → troco R$ 37,56 =
 | Atender com a fila vazia | Mensagem "Não há clientes na fila" |
 | Pagamento menor que o total | Recusado, informa quanto falta |
 | Finalizar com carrinho vazio | Recusado |
-| Reposição acima do limite de estoque | Recusada |
+| Quantidade zero ou negativa (carrinho ou reposição) | Recusada |
 | Índice inválido no carrinho | `IndexOutOfBoundsException` com mensagem |
 | Divisão por zero na densidade do grafo | Verificado antes (`possibleEdges == 0`) |
 | Venda consistente | O estoque de **todos** os itens é verificado antes de baixar qualquer um; o carrinho só é baixado no estoque ao finalizar (cancelar não altera nada) |

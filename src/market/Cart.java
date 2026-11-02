@@ -16,26 +16,30 @@ public class Cart {
     public void add(int code, int quantity) {
         validateAddition(code, quantity);
         insert(code, quantity);
-        history.push(new CartOperation(CartOperation.Type.ADD, code, quantity));
+        history.push(true, code, quantity);
     }
 
     public void remove(int code, int quantity) {
         validateRemoval(code, quantity);
         subtract(code, quantity);
-        history.push(new CartOperation(CartOperation.Type.REMOVE, code, quantity));
+        history.push(false, code, quantity);
     }
 
-    public CartOperation undo() {
-        CartOperation last = history.pop();
-        if (last == null) {
+    public void undo() {
+        if (history.isEmpty()) {
             throw new IllegalStateException("Não há operações para desfazer.");
         }
-        if (last.type() == CartOperation.Type.ADD) {
-            subtract(last.code(), last.quantity());
+        boolean wasAddition = history.topIsAddition();
+        int code = history.topCode();
+        int quantity = history.topQuantity();
+        history.pop();
+        if (wasAddition) {
+            subtract(code, quantity);
         } else {
-            insert(last.code(), last.quantity());
+            insert(code, quantity);
         }
-        return last;
+        System.out.printf("Desfeita a %s de %d x %s.%n",
+                wasAddition ? "adição" : "remoção", quantity, catalog.findByCode(code).getName());
     }
 
     public int quantityOf(int code) {
@@ -49,10 +53,6 @@ public class Cart {
 
     public int distinctItems() {
         return size;
-    }
-
-    public int pendingUndos() {
-        return history.size();
     }
 
     public int codeAt(int index) {
@@ -77,12 +77,12 @@ public class Cart {
         return copy;
     }
 
-    public long totalInCents() {
-        long total = 0;
+    public double total() {
+        double total = 0;
         for (int i = 0; i < size; i++) {
-            total += (long) catalog.priceOf(codes[i]) * quantities[i];
+            total += catalog.priceOf(codes[i]) * quantities[i];
         }
-        return total;
+        return Math.round(total * 100) / 100.0;
     }
 
     public void clear() {
@@ -98,11 +98,11 @@ public class Cart {
         System.out.println("Qtd | Produto                | Unitário   | Subtotal");
         for (int i = 0; i < size; i++) {
             Product product = catalog.findByCode(codes[i]);
-            long subtotal = (long) product.getPriceInCents() * quantities[i];
-            System.out.printf("%3d | %-22s | %10s | %s%n",
-                    quantities[i], product.getName(), Money.format(product.getPriceInCents()), Money.format(subtotal));
+            double subtotal = product.getPrice() * quantities[i];
+            System.out.printf("%3d | %-22s | R$ %7.2f | R$ %.2f%n",
+                    quantities[i], product.getName(), product.getPrice(), subtotal);
         }
-        System.out.println("TOTAL: " + Money.format(totalInCents()));
+        System.out.printf("TOTAL: R$ %.2f%n", total());
     }
 
     private void validateAddition(int code, int quantity) {
